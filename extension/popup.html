@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
+    <title>Zoom Transcript Exporter</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Zoom Transcript Exporter</h1>
+      <p class="instructions">
+        Open the recording, make sure the transcript panel is visible, then click Export.
+      </p>
+      <button id="export" type="button">Export transcript</button>
+      <button id="pick" type="button" class="secondary">Select transcript manually</button>
+      <label class="option">
+        <input id="header" type="checkbox" checked />
+        <span>Add a header with recording details (title, date, link, length)</span>
+      </label>
+      <p id="status" role="status" aria-live="polite"></p>
+      <p id="hint" class="hint" hidden></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

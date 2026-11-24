@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Lecture 7: Graph Algorithms</title>
+    <!--
+      Mock "Zoom recording" page for the e2e tests.
+
+      Query parameters:
+        variant = basic     virtualized list, renders ~18 rows around the viewport (default)
+                  repeated  like basic, plus runs of identical entries (same speaker, time and text)
+                  lazy      like basic, but rows only re-render `delay` ms after scrolling stops
+                  plain     not virtualized: every row is in the DOM
+                  empty     a scrollable panel with a single entry
+                  none      no transcript panel at all
+        count   = number of transcript entries (default 600)
+        delay   = lazy render delay in ms (default 500)
+        smooth  = 1 to give the panel `scroll-behavior: smooth`
+        ts      = 0 to leave timestamps out of the transcript (automatic detection then fails
+                  or picks the chat, which is what manual pick mode is for)
+        chat    = 0 to leave out the decoy chat panel
+
+      window.fixture.expectedLines() returns the full transcript the extension should produce.
+    -->
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; font: 14px/1.3 system-ui, sans-serif; color: #222; }
+      header { height: 48px; padding: 14px 16px; background: #222; color: #fff; }
+      main { display: flex; gap: 16px; padding: 16px; }
+      #video { flex: 1; height: 400px; background: #111; color: #888; display: grid; place-items: center; }
+      aside { width: 380px; display: flex; flex-direction: column; gap: 12px; }
+      #panel { height: 480px; overflow-y: auto; border: 1px solid #ccc; position: relative; }
+      #panel.smooth { scroll-behavior: smooth; }
+      #spacer { position: relative; }
+      .row { height: 64px; padding: 6px 10px; border-bottom: 1px solid #eee; overflow: hidden; }
+      .virtual .row { position: absolute; left: 0; right: 0; }
+      .speaker { height: 16px; font-weight: 600; }
+      .ts { height: 16px; color: #666; font-size: 12px; }
+      .text { height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      #chat { height: 120px; overflow-y: auto; border: 1px solid #ccc; padding: 4px 8px; }
+      #chat div { height: 28px; }
+    </style>
+  </head>
+  <body>
+    <header>Recording · Lecture 7 (mock page) · <span id="recorded">Nov 12, 2026 09:58 AM</span></header>
+    <main>
+      <div id="video">video player placeholder · recorded 10:30</div>
+      <aside id="sidebar"></aside>
+    </main>
+    <script>
+      (() => {
+        const params = new URLSearchParams(location.search);
+        const variant = params.get('variant') || 'basic';
+        const count = variant === 'empty' ? 1 : Number(params.get('count')) || 600;
+        const lazyDelay = Number(params.get('delay')) || 500;
+        const withTimestamps = params.get('ts') !== '0';
+        const withChat = params.get('chat') !== '0';
+        const ROW = 64;
+        const OVERSCAN = 5;
+
+        // Deterministic pseudo-random generator so every run produces the same transcript.
+        function mulberry32(a) {
+          return () => {
+            a |= 0; a = (a + 0x6d2b79f5) | 0;
+            let t = Math.imul(a ^ (a >>> 15), 1 | a);
+            t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+          };
+        }
+        const rnd = mulberry32(7);
+        const pick = (arr) => arr[Math.floor(rnd() * arr.length)];
+        const pad = (n) => String(n).padStart(2, '0');
+        const fmt = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
+
+        const SPEAKERS = ['Dr. Alvarez', 'Priya Natarajan', 'Marcus Tan'];
+        const WORDS = ('so the key idea here is that every vertex keeps a distance estimate and we relax edges ' +
+          'until nothing changes which means the shortest path tree emerges naturally from the queue ordering').split(' ');
+        const SHORT = ['Yeah.', 'Okay.', 'Right.', 'Mm-hmm.'];
+
+        const entries = [];
+        let t = 3;
+        while (entries.length < count) {
+          const speaker = pick(SPEAKERS);
+          if (variant === 'repeated' && rnd() < 0.12) {
+            const text = pick(SHORT);
+            if (rnd() < 0.5) {
+              // Identical entries: same speaker, same second, same text (2 or 3 in a row).
+              const n = 2 + Math.floor(rnd() * 2);
+              for (let i = 0; i < n; i++) entries.push({ speaker, ts: fmt(t), text });
+            } else {
+              // Same text from the same speaker at consecutive timestamps.
+              for (let i = 0; i < 3; i++) entries.push({ speaker, ts: fmt(t + i), text });
+              t += 2;
+            }
+          } else {
+            const n = 4 + Math.floor(rnd() * 14);
+            const text = Array.from({ length: n }, () => pick(WORDS)).join(' ');
+            entries.push({ speaker, ts: fmt(t), text: text[0].toUpperCase() + text.slice(1) + '.' });
+          }
+          t += 1 + Math.floor(rnd() * 9);
+        }
+        entries.length = count;
+
+        const sidebar = document.getElementById('sidebar');
+
+        // Decoy: a smaller scrollable chat that also contains times. Detection must not pick it.
+        if (variant !== 'none' && withChat) {
+          const chat = document.createElement('div');
+          chat.id = 'chat';
+          for (let i = 0; i < 20; i++) {
+            const d = document.createElement('div');
+            d.textContent = `10:${pad(i)} AM  Student ${i + 1}: question about slide ${i + 2}`;
+            chat.appendChild(d);
+          }
+          sidebar.appendChild(chat);
+        }
+
+        if (variant === 'none') {
+          window.fixture = { expectedLines: () => [] };
+          return;
+        }
+
+        const panel = document.createElement('div');
+        panel.id = 'panel';
+        if (params.get('smooth') === '1') panel.classList.add('smooth');
+        const spacer = document.createElement('div');
+        spacer.id = 'spacer';
+        panel.appendChild(spacer);
+        sidebar.prepend(panel);
+
+        const fields = (e) =>
+          withTimestamps
+            ? [['speaker', e.speaker], ['ts', e.ts], ['text', e.text]]
+            : [['speaker', e.speaker], ['text', e.text]];
+
+        function makeRow(i) {
+          const e = entries[i];
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.style.top = `${i * ROW}px`;
+          for (const [cls, value] of fields(e)) {
+            const d = document.createElement('div');
+            d.className = cls;
+            d.textContent = value;
+            row.appendChild(d);
+          }
+          return row;
+        }
+
+        if (variant === 'plain' || variant === 'empty') {
+          for (let i = 0; i < entries.length; i++) spacer.appendChild(makeRow(i));
+          if (variant === 'empty') spacer.style.height = '1400px';
+        } else {
+          // Virtualized: only rows near the viewport exist in the DOM, in index order
+          // (as React keyed lists keep them). Rows that stay in range are reused.
+          panel.classList.add('virtual');
+          spacer.style.height = `${entries.length * ROW}px`;
+          let rendered = new Map();
+          const render = () => {
+            const first = Math.max(0, Math.floor(panel.scrollTop / ROW) - OVERSCAN);
+            const last = Math.min(entries.length - 1, Math.ceil((panel.scrollTop + panel.clientHeight) / ROW) + OVERSCAN);
+            const keys = [...rendered.keys()];
+            if (keys[0] === first && keys[keys.length - 1] === last) return;
+            const next = new Map();
+            for (let i = first; i <= last; i++) next.set(i, rendered.get(i) || makeRow(i));
+            spacer.replaceChildren(...next.values());
+            rendered = next;
+          };
+          render();
+          if (variant === 'lazy') {
+            let timer = 0;
+            panel.addEventListener('scroll', () => {
+              clearTimeout(timer);
+              timer = setTimeout(render, lazyDelay);
+            });
+          } else {
+            panel.addEventListener('scroll', render);
+          }
+        }
+
+        window.fixture = {
+          entries,
+          panel,
+          expectedLines: () => entries.flatMap((e) => fields(e).map(([, value]) => value)),
+        };
+      })();
+    </script>
+  </body>
+</html>

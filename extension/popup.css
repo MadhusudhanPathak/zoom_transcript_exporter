@@ -1,0 +1,137 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1f2328;
+  --muted: #59636e;
+  --accent: #3b5bdb;
+  --accent-hover: #364fc7;
+  --accent-fg: #ffffff;
+  --accent-soft: #edf2ff;
+  --error: #cf222e;
+  --ok: #1a7f37;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1f2329;
+    --fg: #e6edf3;
+    --muted: #9198a1;
+    --accent: #5c7cfa;
+    --accent-hover: #748ffc;
+    --accent-fg: #0d1117;
+    --accent-soft: #252d45;
+    --error: #ff7b72;
+    --ok: #3fb950;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  width: 300px;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+main {
+  padding: 16px;
+}
+
+h1 {
+  font-size: 15px;
+  margin: 0 0 6px;
+}
+
+.instructions {
+  margin: 0 0 14px;
+  color: var(--muted);
+}
+
+button {
+  width: 100%;
+  padding: 9px 12px;
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.secondary {
+  margin-top: 8px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+button.secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+/* After "not found", the manual option becomes the main action. */
+button.secondary.suggested {
+  font-weight: 600;
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+button.secondary.suggested:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.option input {
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+#status {
+  margin: 12px 0 0;
+  min-height: 1em;
+}
+
+#status:empty {
+  display: none;
+}
+
+#status.error {
+  color: var(--error);
+}
+
+#status.ok {
+  color: var(--ok);
+}
+
+.hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}

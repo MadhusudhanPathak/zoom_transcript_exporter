@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Test output (Playwright)
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+
+# Logs and local env
+*.log
+npm-debug.log*
+.env
+.env.*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+# Local AI-assistant settings (personal, not project files)
+.claude/settings.local.json
+
+# Note: Release/ is committed on purpose. It holds the zip, checksum and notes
+# attached to GitHub releases (built by `npm run package`).
